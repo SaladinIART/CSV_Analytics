@@ -148,7 +148,21 @@ def generate_pdf_report(output_file, df, stats, figures, outliers):
         img_data = io.BytesIO()
         fig.savefig(img_data, format='png', dpi=300, bbox_inches='tight')
         img_data.seek(0)
-        img = Image(img_data, width=10*inch, height=7*inch)  # Adjust size for landscape A4
+        img = Image(img_data)
+        
+        # Calculate the available space on the page
+        available_width = doc.width * 0.9  # 90% of the page width
+        available_height = doc.height * 0.7  # 70% of the page height
+        
+        # Adjust the image size to fit within the available space
+        img.drawWidth = available_width
+        img.drawHeight = available_height
+        aspect = img.imageWidth / float(img.imageHeight)
+        if img.drawWidth / float(img.drawHeight) > aspect:
+            img.drawWidth = img.drawHeight * aspect
+        else:
+            img.drawHeight = img.drawWidth / aspect
+        
         story.append(img)
         story.append(PageBreak())
 
@@ -172,7 +186,7 @@ def generate_pdf_report(output_file, df, stats, figures, outliers):
             ]))
             story.append(t)
             story.append(PageBreak())
-
+            
     doc.build(story)
 
 def create_extrusion_pressure_plot(df):
