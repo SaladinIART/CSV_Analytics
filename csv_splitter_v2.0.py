@@ -1,6 +1,14 @@
 import csv
 import os
 from collections import defaultdict
+import datetime
+
+def get_current_date():
+    return datetime.datetime.now().strftime("%Y-%m-%d")
+
+def sanitize_filename(filename):
+    # Replace slashes with hyphens and remove any other invalid characters
+    return ''.join(c if c.isalnum() or c in ('-', '_') else '_' for c in filename.replace('/', '-'))
 
 def split_csv_by_profile_and_date(input_file, output_base_dir):
     # Columns to exclude
@@ -27,14 +35,17 @@ def split_csv_by_profile_and_date(input_file, output_base_dir):
     # Write data to separate CSV files
     for profile, date_data in profile_date_data.items():
         for date_str, rows in date_data.items():
-            profile_dir = os.path.join(output_base_dir, 'by_profile', profile)
-            date_dir = os.path.join(output_base_dir, 'by_date', date_str)
+            sanitized_profile = sanitize_filename(profile)
+            sanitized_date = sanitize_filename(date_str)
+            
+            profile_dir = os.path.join(output_base_dir, 'by_profile', sanitized_profile)
+            date_dir = os.path.join(output_base_dir, 'by_date', sanitized_date)
             
             os.makedirs(profile_dir, exist_ok=True)
             os.makedirs(date_dir, exist_ok=True)
             
-            profile_file = os.path.join(profile_dir, f"{profile}_{date_str}.csv")
-            date_file = os.path.join(date_dir, f"{profile}_{date_str}.csv")
+            profile_file = os.path.join(profile_dir, f"{sanitized_profile}_{sanitized_date}.csv")
+            date_file = os.path.join(date_dir, f"{sanitized_profile}_{sanitized_date}.csv")
             
             # Write to profile-specific file
             with open(profile_file, 'w', newline='', encoding='utf-8') as f:
@@ -61,15 +72,22 @@ def generate_key_notes(profile_date_data, output_base_dir):
             num_records = len(rows)
             key_notes.append(f"Profile: {profile}, Date: {date_str}, Number of records: {num_records}")
 
-    # Write key notes to a file
-    key_notes_file = os.path.join(output_base_dir, 'key_notes.txt')
+    # Get current date for the filename
+    current_date = get_current_date()
+    
+    # Write key notes to a file with the current date in the filename
+    key_notes_file = os.path.join(output_base_dir, f'key_notes_{current_date}.txt')
     with open(key_notes_file, 'w', encoding='utf-8') as f:
         f.write("\n".join(key_notes))
 
     print(f"Key notes have been written to {key_notes_file}")
-
+    
 # Usage
-input_file = r"D:\Csv analytics\csv_data_to_analyze\p7_10_24.csv"
+input_file = r"D:\Csv analytics\csv_data_to_analyze\p7_16_10_24.csv"
 output_base_dir = r"D:\Csv analytics\csv_data_to_analyze\output"
 
-split_csv_by_profile_and_date(input_file, output_base_dir)
+try:
+    split_csv_by_profile_and_date(input_file, output_base_dir)
+except Exception as e:
+    print(f"An error occurred: {str(e)}")
+    print("Please check that the input file exists and the output directory is writable.")
