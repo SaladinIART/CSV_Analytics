@@ -17,7 +17,7 @@ def analyze_data(input_file, output_dir):
     correlations = calculate_correlations(df)
     outliers = detect_outliers_isolation_forest(df)
     
-    time_series_figures = plot_time_series(df, df.select_dtypes(include=[pd.np.number]).columns)
+    time_series_figures = plot_time_series(df, df.select_dtypes(include=[np.number]).columns)
     combined_pressure_fig = create_combined_pressure_plot(df)
     correlation_heatmap_fig = create_correlation_heatmap(df)
     
@@ -28,7 +28,7 @@ def analyze_data(input_file, output_dir):
     
     generate_pdf_report(output_file, df, stats, all_figures, outliers, correlations)
     print(f"Analysis complete. Report saved as: {output_file}")
-
+    
 def main():
     output_dir = r"D:\Csv analytics\csv_data_to_analyze\output"
     os.makedirs(output_dir, exist_ok=True)

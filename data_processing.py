@@ -12,9 +12,13 @@ def load_data(file_path):
 def preprocess_data(df):
     # Convert object columns to numeric where possible
     for col in df.select_dtypes(include=['object']):
-        df[col] = pd.to_numeric(df[col], errors='ignore')
+        try:
+            df[col] = pd.to_numeric(df[col])
+        except ValueError:
+            pass  # Keep as object if conversion fails
     
     # Handle missing values
+    df = df.infer_objects(copy=False)  # Infer better dtypes before interpolation
     df = df.interpolate()
     
     # Smooth noisy data using rolling mean
