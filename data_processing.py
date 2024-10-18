@@ -24,11 +24,10 @@ def verify_file_format(file_path):
     if not file_name.endswith('.csv'):
         return False
     
-    parts = file_name.split('_')
-    if len(parts) != 4 or parts[0] != 'output' or parts[1] != 'by' or parts[2] != 'day':
-        return False
+    # Extract the date part from the filename
+    date_part = file_name.split('.')[0]  # Remove .csv
+    date_range = date_part.split('_to_')
     
-    date_range = parts[3].split('.')[0].split('-to-')
     if len(date_range) != 2:
         return False
     
