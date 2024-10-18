@@ -19,7 +19,8 @@ def preprocess_data(df):
     
     # Handle missing values
     df = df.infer_objects(copy=False)  # Infer better dtypes before interpolation
-    df = df.interpolate()
+    numeric_df = df.select_dtypes(include=[np.number])
+    df[numeric_df.columns] = numeric_df.interpolate()
     
     # Smooth noisy data using rolling mean
     numeric_columns = df.select_dtypes(include=[np.number]).columns

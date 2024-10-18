@@ -21,13 +21,12 @@ def analyze_data(input_file, output_dir):
     combined_pressure_fig = create_combined_pressure_plot(df)
     correlation_heatmap_fig = create_correlation_heatmap(df)
     
-    all_figures = time_series_figures + [
-        ("Combined Pressure and Pump Values", combined_pressure_fig),
-        ("Correlation Heatmap", correlation_heatmap_fig)
-    ]
+    all_figures = time_series_figures + [("Combined Pressure and Pump Values", combined_pressure_fig)]
+    if correlation_heatmap_fig is not None:
+        all_figures.append(("Correlation Heatmap", correlation_heatmap_fig))
     
     generate_pdf_report(output_file, df, stats, all_figures, outliers, correlations)
-    print(f"Analysis complete. Report saved as: {output_file}")
+    print(f"Analysis complete. Report saved as: {output_file}")    
     
 def main():
     output_dir = r"D:\Csv analytics\csv_data_to_analyze\output"

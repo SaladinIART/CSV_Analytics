@@ -50,7 +50,12 @@ def create_combined_pressure_plot(df):
     return fig
 
 def create_correlation_heatmap(df):
-    corr = df.corr()
+    numeric_df = df.select_dtypes(include=[np.number])
+    if numeric_df.empty:
+        print("No numeric columns found for correlation heatmap.")
+        return None
+    
+    corr = numeric_df.corr()
     fig, ax = plt.subplots(figsize=(11.69, 8.27))  # A4 landscape size in inches
     sns.heatmap(corr, annot=True, cmap='coolwarm', ax=ax, fmt='.2f')
     ax.set_title("Correlation Heatmap")
