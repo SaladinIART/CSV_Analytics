@@ -5,7 +5,11 @@ import os
 def load_data(file_path):
     df = pd.read_csv(file_path)
     if 'Date' in df.columns:
-        df['Date'] = pd.to_datetime(df['Date'], format='%d/%m/%y %H:%M')
+        # Try to parse dates without specifying a format
+        df['Date'] = pd.to_datetime(df['Date'], infer_datetime_format=True, errors='coerce')
+        # If any dates failed to parse, try a specific format
+        if df['Date'].isnull().any():
+            df['Date'] = pd.to_datetime(df['Date'], format='%d/%m/%y %H:%M', errors='coerce')
         df.set_index('Date', inplace=True)
     return df
 
