@@ -5,15 +5,15 @@ import os
 def load_data(file_path):
     df = pd.read_csv(file_path)
     if 'Date' in df.columns:
-        # Try to parse dates without specifying a format
-        df['Date'] = pd.to_datetime(df['Date'], infer_datetime_format=True, errors='coerce')
-        # If any dates failed to parse, try a specific format
-        if df['Date'].isnull().any():
-            df['Date'] = pd.to_datetime(df['Date'], format='%d/%m/%y %H:%M', errors='coerce')
+        df['Date'] = pd.to_datetime(df['Date'], errors='coerce')
         df.set_index('Date', inplace=True)
     return df
 
 def preprocess_data(df):
+    # Convert object columns to numeric where possible
+    for col in df.select_dtypes(include=['object']):
+        df[col] = pd.to_numeric(df[col], errors='ignore')
+    
     # Handle missing values
     df = df.interpolate()
     
