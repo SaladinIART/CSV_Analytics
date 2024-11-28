@@ -6,27 +6,35 @@ def sanitize_filename(filename):
     """Sanitize filenames to ensure compatibility with all operating systems."""
     return ''.join(c if c.isalnum() or c in ('-', '_') else '_' for c in filename)
 
-def week_number_from_date(date):
-    """Get the week number and year from a date."""
-    return date.isocalendar().week, date.year
-
-def split_csv_by_week(input_file, output_base_dir):
+def calculate_shifted_date(timestamp):
     """
-    Split the CSV data into weekly chunks based on the timestamp column.
-    Data cleaning (removing NULL values) is applied before splitting.
+    Adjust timestamp for a 7AM-7AM operational day.
+    If the timestamp is before 7AM, associate it with the previous day.
+    """
+    if pd.isnull(timestamp):
+        return None  # Return None for invalid timestamps
+    if timestamp.hour < 7:
+        return (timestamp - timedelta(days=1)).date()
+    return timestamp.date()
+
+def split_csv_by_day(input_file, output_base_dir):
+    """
+    Split the CSV data into daily chunks based on the timestamp column
+    with a 7AM-7AM operational day adjustment.
     """
     try:
-        df = pd.read_csv(input_file, na_values=['NULL'])
-        
+        # Load and parse the CSV (no data cleaning applied)
+        df = pd.read_csv(input_file)
+
         # Convert 'Timestamp' to datetime
         if 'Timestamp' in df.columns:
-            df['Timestamp'] = pd.to_datetime(df['Timestamp'], errors='coerce')
+            df['Timestamp'] = pd.to_datetime(df['Timestamp'], errors='coerce')  # Invalid timestamps become NaT
         else:
             raise ValueError("Timestamp column not found in the dataset.")
         
-        # Drop rows with invalid or missing timestamps
-        df = df.dropna(subset=['Timestamp'])
-        
+        # Adjust the date for 7AM-7AM operational logic
+        df['ShiftedDate'] = df['Timestamp'].apply(calculate_shifted_date)
+
     except Exception as e:
         print(f"Error reading or parsing the file: {e}")
         return
@@ -34,27 +42,27 @@ def split_csv_by_week(input_file, output_base_dir):
     # Ensure Timestamp is sorted
     df = df.sort_values('Timestamp')
 
-    # Create week number and year columns
-    df['Week'] = df['Timestamp'].dt.isocalendar().week
-    df['Year'] = df['Timestamp'].dt.year
+    # Group by shifted date
+    grouped = df.groupby('ShiftedDate')
 
-    # Group by week and year
-    grouped = df.groupby(['Year', 'Week'])
+    for shifted_date, group in grouped:
+        if pd.isnull(shifted_date):
+            print("Skipping rows with invalid timestamps.")
+            continue  # Skip rows with invalid timestamps
 
-    for (year, week), group in grouped:
-        location = "Office"  # Fixed location for now
-        folder_name = os.path.join(output_base_dir, f"{year}_W{week:02d}_{location}")
+        # Generate daily folder
+        folder_name = os.path.join(output_base_dir, f"{shifted_date}_Office")
         os.makedirs(folder_name, exist_ok=True)
 
         # Generate clean file name
-        filename = f"PUA_W{week:02d}_Office_{year}.csv"
-        output_path = os.path.join(folder_name, filename)
-        group.drop(columns=['Week', 'Year']).to_csv(output_path, index=False)
+        filename = f"PUA_{shifted_date}_Office.csv"
+        output_path = os.path.join(folder_name, sanitize_filename(filename))
+        group.drop(columns=['ShiftedDate']).to_csv(output_path, index=False)
         print(f"Saved file: {output_path}")
-        
+
 def main():
     """
-    Main program to interact with the user and split the CSV by weekly data.
+    Main program to interact with the user and split the CSV by daily data.
     """
     output_base_dir = r"D:\PUA_analysis"  # Output directory
 
@@ -68,8 +76,8 @@ def main():
             continue
         
         try:
-            # Split the file by week
-            split_csv_by_week(input_file, output_base_dir)
+            # Split the file by day
+            split_csv_by_day(input_file, output_base_dir)
         except Exception as e:
             print(f"An error occurred: {e}")
         
