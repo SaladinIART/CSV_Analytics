@@ -14,8 +14,8 @@ def calculate_shifted_date(timestamp):
     if pd.isnull(timestamp):
         return None  # Handle invalid timestamps
     if timestamp.hour < 7:
-        return (timestamp - timedelta(days=1)).date()
-    return timestamp.date()
+        return (timestamp - timedelta(days=1)).strftime('%d/%m/%Y')  # Use DD/MM/YYYY format
+    return timestamp.strftime('%d/%m/%Y')
 
 def split_csv_by_7am_days(input_file, output_base_dir):
     """
@@ -28,7 +28,7 @@ def split_csv_by_7am_days(input_file, output_base_dir):
 
         # Convert 'Timestamp' to datetime
         if 'Timestamp' in df.columns:
-            df['Timestamp'] = pd.to_datetime(df['Timestamp'], errors='coerce')  # Invalid timestamps become NaT
+            df['Timestamp'] = pd.to_datetime(df['Timestamp'], format='%d/%m/%Y %H:%M', errors='coerce')
         else:
             raise ValueError("Timestamp column not found in the dataset.")
         
@@ -54,9 +54,9 @@ def split_csv_by_7am_days(input_file, output_base_dir):
     # Create output folders and save each day's data
     for shifted_date, group in grouped:
         # Generate daily folder and file names
-        folder_name = os.path.join(output_base_dir, f"{shifted_date}_Office")
+        folder_name = os.path.join(output_base_dir, f"{shifted_date.replace('/', '-')}_Office")
         os.makedirs(folder_name, exist_ok=True)
-        filename = f"PUA_{shifted_date}_Office.csv"  # Fixed .csv extension issue
+        filename = f"PUA_{shifted_date.replace('/', '-')}_Office.csv"  # Use DD-MM-YYYY in filenames
         output_path = os.path.join(folder_name, sanitize_filename(filename))
 
         # Save the daily data to CSV
