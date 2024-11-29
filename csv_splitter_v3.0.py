@@ -4,7 +4,7 @@ from datetime import datetime, timedelta
 
 def sanitize_filename(filename):
     """Sanitize filenames to ensure compatibility with all operating systems."""
-    return ''.join(c if c.isalnum() or c in ('-', '_') else '_' for c in filename)
+    return ''.join(c if c.isalnum() or c in ('-', '_', '.') else '_' for c in filename)
 
 def calculate_shifted_date(timestamp):
     """
@@ -56,7 +56,7 @@ def split_csv_by_7am_days(input_file, output_base_dir):
         # Generate daily folder and file names
         folder_name = os.path.join(output_base_dir, f"{shifted_date}_Office")
         os.makedirs(folder_name, exist_ok=True)
-        filename = f"PUA_{shifted_date}_Office.csv"
+        filename = f"PUA_{shifted_date}_Office.csv"  # Fixed .csv extension issue
         output_path = os.path.join(folder_name, sanitize_filename(filename))
 
         # Save the daily data to CSV
