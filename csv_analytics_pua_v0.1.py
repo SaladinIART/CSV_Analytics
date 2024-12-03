@@ -5,11 +5,17 @@ import matplotlib.pyplot as plt
 COST_RATE = 0.355  # Update this based on your actual rates
 
 # Load the CSV file
-file_path = 'path_to_your_file.csv'  # Replace with your actual file path
+file_path = r"D:\OneDrive\Desktop\rx380_daily_logs\p7_pua.csv"  # Replace with your actual path
 data = pd.read_csv(file_path)
 
-# Convert timestamp to datetime
-data['timestamp'] = pd.to_datetime(data['timestamp'])
+# Convert timestamp to datetime with proper dayfirst handling
+data['timestamp'] = pd.to_datetime(data['timestamp'], dayfirst=True)
+
+# Convert total_real_energy to numeric
+data['total_real_energy'] = pd.to_numeric(data['total_real_energy'], errors='coerce')
+
+# Replace NaN values in total_real_energy with 0
+data['total_real_energy'].fillna(0, inplace=True)
 
 # Calculate cost per hour
 data['cost_per_hour'] = data['total_real_energy'] * COST_RATE
@@ -24,6 +30,7 @@ plt.grid(True)
 plt.legend()
 plt.tight_layout()
 plt.show()
+
 
 # Visualization: Peak Demand
 plt.figure(figsize=(12, 6))
