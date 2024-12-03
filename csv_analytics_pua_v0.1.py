@@ -1,88 +1,113 @@
 import pandas as pd
 import matplotlib.pyplot as plt
+from matplotlib.backends.backend_pdf import PdfPages
+import os
 
 # Define TNB cost rate (example: 0.355 RM/kWh)
-COST_RATE = 0.355  # Update this based on your actual rates
+COST_RATE = 0.355
 
-# Load the CSV file
-file_path = r"D:\OneDrive\Desktop\rx380_daily_logs\p7_pua.csv"  # Replace with your actual path
-data = pd.read_csv(file_path)
+def log_error(message):
+    """Log errors to a file with a timestamp."""
+    with open("error_log.txt", "a") as log_file:
+        log_file.write(f"{pd.Timestamp.now()} - {message}\n")
 
-# Convert timestamp to datetime with proper dayfirst handling
-data['timestamp'] = pd.to_datetime(data['timestamp'], dayfirst=True)
+def validate_columns(data, required_columns):
+    """Validate that all required columns are present."""
+    missing_columns = [col for col in required_columns if col not in data.columns]
+    if missing_columns:
+        log_error(f"Missing columns: {', '.join(missing_columns)}")
+        return False
+    return True
 
-# Convert total_real_energy to numeric
-data['total_real_energy'] = pd.to_numeric(data['total_real_energy'], errors='coerce')
+def main():
+    # Prompt user for file path
+    file_path = input("Enter the path to the filtered .csv file: ").strip()
+    
+    if not os.path.exists(file_path):
+        log_error(f"File not found: {file_path}")
+        print("Error: File not found. Check the path and try again.")
+        return
+    
+    try:
+        # Load the data
+        data = pd.read_csv(file_path)
+    except Exception as e:
+        log_error(f"Failed to read file {file_path}: {str(e)}")
+        print("Error: Unable to read the file. Check the format and try again.")
+        return
 
-# Replace NaN values in total_real_energy with 0
-data['total_real_energy'].fillna(0, inplace=True)
+    # Validate required columns
+    required_columns = ['timestamp', 'total_real_energy', 'total_real_power']
+    if not validate_columns(data, required_columns):
+        print("Error: Missing required columns. Check the error log for details.")
+        return
 
-# Calculate cost per hour
-data['cost_per_hour'] = data['total_real_energy'] * COST_RATE
+    # Convert timestamp to datetime and energy to numeric
+    try:
+        data['timestamp'] = pd.to_datetime(data['timestamp'])
+        data['total_real_energy'] = pd.to_numeric(data['total_real_energy'], errors='coerce')
+    except Exception as e:
+        log_error(f"Data parsing error: {str(e)}")
+        print("Error: Failed to parse data. Check the error log for details.")
+        return
 
-# Visualization: Cost Per Hour
-plt.figure(figsize=(12, 6))
-plt.plot(data['timestamp'], data['cost_per_hour'], label='Cost per Hour (RM)')
-plt.title("Cost Per Hour Trend")
-plt.xlabel("Timestamp")
-plt.ylabel("Cost (RM)")
-plt.grid(True)
-plt.legend()
-plt.tight_layout()
-plt.show()
+    # Fill missing energy values with 0
+    data['total_real_energy'].fillna(0, inplace=True)
 
+    # Calculate cost per hour
+    data['cost_per_hour'] = data['total_real_energy'] * COST_RATE
 
-# Visualization: Peak Demand
-plt.figure(figsize=(12, 6))
-plt.plot(data['timestamp'], data['total_real_power'], label='Peak Demand (kW)', color='orange')
-plt.title("Peak Demand Trend")
-plt.xlabel("Timestamp")
-plt.ylabel("Demand (kW)")
-plt.grid(True)
-plt.legend()
-plt.tight_layout()
-plt.show()
+    # Generate the PDF report
+    pdf_filename = "Energy_Report.pdf"
+    with PdfPages(pdf_filename) as pdf:
+        # Page 1: Cost Per Hour Trend
+        plt.figure(figsize=(12, 6))
+        plt.plot(data['timestamp'], data['cost_per_hour'], label='Cost per Hour (RM)', color='blue')
+        plt.title("Cost Per Hour Trend")
+        plt.xlabel("Timestamp")
+        plt.ylabel("Cost (RM)")
+        plt.grid(True)
+        plt.legend()
+        plt.tight_layout()
+        pdf.savefig()
+        plt.close()
 
-# Combined Dashboard: Key Metrics
-fig, ax = plt.subplots(2, 2, figsize=(16, 12))
+        # Page 2: Peak Demand Trend
+        plt.figure(figsize=(12, 6))
+        plt.plot(data['timestamp'], data['total_real_power'], label='Peak Demand (kW)', color='orange')
+        plt.title("Peak Demand Trend")
+        plt.xlabel("Timestamp")
+        plt.ylabel("Demand (kW)")
+        plt.grid(True)
+        plt.legend()
+        plt.tight_layout()
+        pdf.savefig()
+        plt.close()
 
-# Subplot 1: Voltage Trends
-ax[0, 0].plot(data['timestamp'], data['voltage_l1'], label='Voltage L1', alpha=0.7)
-ax[0, 0].plot(data['timestamp'], data['voltage_l2'], label='Voltage L2', alpha=0.7)
-ax[0, 0].plot(data['timestamp'], data['voltage_l3'], label='Voltage L3', alpha=0.7)
-ax[0, 0].set_title("Voltage Trends")
-ax[0, 0].set_xlabel("Timestamp")
-ax[0, 0].set_ylabel("Voltage (V)")
-ax[0, 0].legend()
-ax[0, 0].grid(True)
+        # Page 3: Summary Table
+        total_energy = data['total_real_energy'].sum()
+        total_cost = data['cost_per_hour'].sum()
+        peak_demand = data['total_real_power'].max()
+        avg_cost_per_hour = data['cost_per_hour'].mean()
+        missing_data_points = data['total_real_energy'].isna().sum()
+        summary_text = f"""
+        Energy Monitoring Report:
 
-# Subplot 2: Current Trends
-if 'current_l1' in data.columns:
-    ax[0, 1].plot(data['timestamp'], data['current_l1'], label='Current L1', alpha=0.7)
-    ax[0, 1].plot(data['timestamp'], data['current_l2'], label='Current L2', alpha=0.7)
-    ax[0, 1].plot(data['timestamp'], data['current_l3'], label='Current L3', alpha=0.7)
-    ax[0, 1].set_title("Current Trends")
-    ax[0, 1].set_xlabel("Timestamp")
-    ax[0, 1].set_ylabel("Current (A)")
-    ax[0, 1].legend()
-    ax[0, 1].grid(True)
+        - Total Energy Consumption (kWh): {total_energy:,.2f}
+        - Total Cost (RM): {total_cost:,.2f}
+        - Peak Demand Observed (kW): {peak_demand:,.2f}
+        - Average Cost per Hour (RM): {avg_cost_per_hour:,.2f}
 
-# Subplot 3: Power Factor
-if 'total_power_factor' in data.columns:
-    ax[1, 0].plot(data['timestamp'], data['total_power_factor'], label='Power Factor', color='green')
-    ax[1, 0].set_title("Power Factor Trend")
-    ax[1, 0].set_xlabel("Timestamp")
-    ax[1, 0].set_ylabel("Power Factor")
-    ax[1, 0].grid(True)
-    ax[1, 0].legend()
+        Data Issues:
+        - Missing Data Points: {missing_data_points}
+        """
+        plt.figure(figsize=(8.5, 11))
+        plt.text(0.1, 0.9, summary_text, fontsize=12, va='top', wrap=True)
+        plt.axis('off')
+        pdf.savefig()
+        plt.close()
 
-# Subplot 4: Cost per Hour
-ax[1, 1].plot(data['timestamp'], data['cost_per_hour'], label='Cost per Hour (RM)', color='purple')
-ax[1, 1].set_title("Cost Per Hour")
-ax[1, 1].set_xlabel("Timestamp")
-ax[1, 1].set_ylabel("Cost (RM)")
-ax[1, 1].grid(True)
-ax[1, 1].legend()
+    print(f"Report successfully saved as {pdf_filename}")
 
-plt.tight_layout()
-plt.show()
+if __name__ == "__main__":
+    main()
